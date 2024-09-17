@@ -27,9 +27,14 @@ return [
         'body'          => 'Hola,<br /><br />Basado en el círculo recurrente de {customer_name}, la factura <strong>{invoice_number}</strong> ha sido creada automáticamente.<br /><br />Puede ver los detalles de la factura desde el siguiente enlace: <a href="{invoice_admin_link}">{invoice_number}</a>.<br /><br />Saludos cordiales,<br />{company_name}',
     ],
 
+    'invoice_view_admin' => [
+        'subject'       => 'factura {invoice_number} ha sido vista',
+        'body'          => 'Hola,<br /><br />{customer_name} registró un pago por la factura <strong>{invoice_number}</strong>.<br /><br />Puede ver los detalles de la factura desde el siguiente enlace: <a href="{invoice_admin_link}">{invoice_number}</a>.<br /><br />Saludos cordiales,<br />{company_name}',
+    ],
+
     'invoice_payment_customer' => [
-        'subject'       => 'Pago recibido por factura No. {invoice_number}',
-        'body'          => 'Apreciado {customer_name},<br /><br />Gracias por la realización del pago. Encuentre los detalles a continuación:<br /><br />-------------------------------------------------<br /><br />Monto: <strong>{transaction_total}<br /></strong>Fecha: <strong>{transaction_paid_date}</strong><br />Factura número: <strong>{invoice_number}<br /><br /></strong>-------------------------------------------------<br /><br />Siempre puede ver los detalles de la factura desde el siguiente enlace: <a href="{invoice_guest_link}">{invoice_number}</a>.<br /><br />No dude en contactarnos si tiene alguna inquietud.<br /><br />Cordialmente,<br />{company_name}',
+        'subject'       => 'Pago recibido por factura {invoice_number}',
+        'body'          => 'Estimado {customer_name},<br /><br />Gracias por el pago. Encuentre los detalles de pago a continuación:<br /><br />-------------------------------------------------<br /><br />Monto: <strong>{transaction_total}<br /></strong>Fecha: <strong>{transaction_paid_date}</strong><br />Número de factura: <strong>{invoice_number}<br /><br /></strong>-------------------------------------------------<br /><br />Siempre puede ver los detalles de la factura desde el siguiente enlace: <a href="{invoice_guest_link}">{invoice_number}</a>.<br /><br />Ponte en contacto con nosotros para cualquier pregunta.<br /><br />Saludos cordiales,<br />{company_name}',
     ],
 
     'invoice_payment_admin' => [
@@ -47,13 +52,13 @@ return [
         'body'          => 'Hola,<br /><br /> Basado en el círculo recurrente de {vendor_name}, el recibo <strong>{bill_number}</strong> ha sido creado automáticamente.<br /><br />Puedes ver los detalles del recibo desde el siguiente enlace: <a href="{bill_admin_link}">{bill_number}</a>.<br /><br />Saludos cordiales,<br />{company_name}',
     ],
 
-    'revenue_new_customer' => [
-        'subject'       => 'Pago de {revenue_date} creado',
-        'body'          => 'Apreciado {customer_name},<br /><br />Hemos preparado el siguiente pago. <br /><br />Puede ver los detalles del pago en el siguiente enlace: <a href="{revenue_guest_link}">{revenue_date}</a>.<br /><br />No dude en contactarnos si tiene alguna inquietud.<br /><br />Cordialmente,<br />{company_name}',
+    'payment_received_customer' => [
+        'subject'       => 'Tu recibo de {company_name}',
+        'body'          => 'Apreciado {contact_name},<br /><br />Gracias por el pago. <br /><br />Puede ver los detalles del pago en el siguiente enlace: <a href="{payment_guest_link}">{payment_date}</a>.<br /><br />No dude en contactarnos si tiene alguna pregunta.<br /><br />Cordialmente,<br />{company_name}',
     ],
 
-    'payment_new_vendor' => [
-        'subject'       => 'Pago de {revenue_date} creado',
-        'body'          => 'Apreciado {vendor_name},<br /><br />Hemos preparado el siguiente pago. <br /><br />Puede ver los detalles del pago en el siguiente enlace: <a href="{payment_admin_link}">{payment_date}</a>.<br /><br />No dude en contactarnos si tiene alguna inquietud.<br /><br />Cordialmente,<br />{company_name}',
+    'payment_made_vendor' => [
+        'subject'       => 'Pago realizado por {company_name}',
+        'body'          => 'Estimado {contact_name},<br /><br />Hemos realizado el siguiente pago. <br /><br />Puedes ver los detalles del pago desde el siguiente enlace: <a href="{payment_guest_link}">{payment_date}</a>.<br /><br />Póngase en contacto con nosotros para cualquier pregunta.<br /><br />Saludos cordiales,<br />{company_name}',
     ],
 ];

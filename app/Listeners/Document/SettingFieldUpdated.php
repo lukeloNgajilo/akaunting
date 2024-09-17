@@ -24,12 +24,17 @@ class SettingFieldUpdated
         $request = $event->request;
         $document = $event->document;
 
-        if (!$request->has('setting')) {
+        if (! $request->has('setting')) {
             return;
         }
 
         $type = $request->get('type');
         $fields = $request->get('setting', []);
+
+        // remove company logo
+        if (Arr::exists($fields, 'company_logo') && ! Arr::has($fields['company_logo'], 'dropzone')) {
+            setting()->forget('company.logo');
+        }
 
         foreach ($fields as $key => $value) {
             if ($key == 'company_logo') {
@@ -56,6 +61,8 @@ class SettingFieldUpdated
                 // Upload attachment    
                 $media = $this->getMedia($value, 'settings');
 
+                $real_key = $type . '.' . $key;
+
                 $company->attachMedia($media, Str::snake($real_key));
 
                 $value = $media->id;
@@ -65,8 +72,6 @@ class SettingFieldUpdated
 
                     continue;
                 }
-
-                $real_key = $type . '.' . $key;
 
                 setting()->set($real_key, $value);
             }

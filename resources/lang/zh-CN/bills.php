@@ -19,11 +19,13 @@ return [
     'total'                 => '总计',
 
     'item_name'             => '产品名称 | 产品名称',
+    'recurring_bills'       => '重复计费|重复计费',
 
     'show_discount'         => ':discount% 折扣',
     'add_discount'          => '新增折扣',
     'discount_desc'         => '小计',
 
+    'payment_made'          => '付款完成',
     'payment_due'           => '付款到期日',
     'amount_due'            => '到期金额',
     'paid'                  => '已付款',
@@ -38,6 +40,10 @@ return [
     'create_bill'           => '创建帐单',
     'receive_bill'          => '接收账单',
     'make_payment'          => '支付',
+
+    'form_description' => [
+        'billing'           => '账单的详细信息出现在您的账单上。账单日期在仪表盘和报告中。 选择您要支付的日期为到期日。',
+    ],
 
     'messages' => [
         'draft'             => '这是 <b>草稿</b> 账单, 在收到后将反映在图表上。',

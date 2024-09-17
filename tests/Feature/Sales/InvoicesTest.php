@@ -2,13 +2,16 @@
 
 namespace Tests\Feature\Sales;
 
-use App\Exports\Sales\Invoices as Export;
+use App\Exports\Sales\Invoices\Invoices as Export;
 use App\Jobs\Document\CreateDocument;
 use App\Models\Document\Document;
+use App\Notifications\Sale\Invoice as Notification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 use Tests\Feature\FeatureTestCase;
 
 class InvoicesTest extends FeatureTestCase
@@ -83,10 +86,12 @@ class InvoicesTest extends FeatureTestCase
         $this->assertDatabaseHas('documents', [
             'document_number' => $request['document_number']
         ]);
+
         $this->assertDatabaseHas('mediables', [
             'mediable_type' => Document::class,
             'tag'           => 'attachment',
         ]);
+
         $this->assertDatabaseHas('media', [
             'disk'           => 'uploads',
             'directory'      => '2021/05/15/1/invoices',
@@ -113,14 +118,52 @@ class InvoicesTest extends FeatureTestCase
         $request = $this->getRequest(true);
 
         $this->loginAs()
-            ->post(route('invoices.store'), $request)
+            ->post(route('recurring-invoices.store'), $request)
             ->assertStatus(200);
 
         $this->assertFlashLevel('success');
 
         $this->assertDatabaseHas('documents', [
+            'type' => Document::INVOICE_RECURRING_TYPE,
             'document_number' => $request['document_number'],
         ]);
+    }
+
+    public function testItShouldSendInvoiceEmail()
+    {
+        NotificationFacade::fake();
+
+        $invoice = $this->dispatch(new CreateDocument($this->getRequest()));
+
+        $this->loginAs()
+            ->post(route('modals.invoices.emails.store', $invoice->id), $this->getEmailRequest($invoice))
+            ->assertStatus(200);
+
+        $this->assertFlashLevel('success');
+
+        NotificationFacade::assertSentTo($invoice->contact, Notification::class);
+    }
+
+    public function testItShouldHitRateLimitForSendInvoiceEmail()
+    {
+        NotificationFacade::fake();
+
+        $limit_per_minute = (int) config('app.throttles.email.minute');
+
+        $invoice = $this->dispatch(new CreateDocument($this->getRequest()));
+
+        for ($i = 0; $i < $limit_per_minute; $i++) {
+            $this->loginAs()
+                ->post(route('modals.invoices.emails.store', $invoice->id), $this->getEmailRequest($invoice));
+        }
+
+        $this->loginAs()
+            ->post(route('modals.invoices.emails.store', $invoice->id), $this->getEmailRequest($invoice))
+            ->assertJson([
+                'success' => false,
+            ]);
+
+        NotificationFacade::assertSentTimes(Notification::class, $limit_per_minute);
     }
 
     public function testItShouldSeeInvoiceUpdatePage()
@@ -178,16 +221,16 @@ class InvoicesTest extends FeatureTestCase
         $count = 5;
         Document::factory()->invoice()->count($count)->create();
 
-        \Excel::fake();
+        Excel::fake();
 
         $this->loginAs()
             ->get(route('invoices.export'))
             ->assertStatus(200);
 
-        \Excel::matchByRegex();
+        Excel::matchByRegex();
 
-        \Excel::assertDownloaded(
-            '/' . \Str::filename(trans_choice('general.invoices', 2)) . '-\d{10}\.xlsx/',
+        Excel::assertDownloaded(
+            '/' . str()->filename(trans_choice('general.invoices', 2)) . '-\d{10}\.xlsx/',
             function (Export $export) use ($count) {
                 // Assert that the correct export is downloaded.
                 return $export->sheets()[0]->collection()->count() === $count;
@@ -202,7 +245,7 @@ class InvoicesTest extends FeatureTestCase
 
         $invoices = Document::factory()->invoice()->count($create_count)->create();
 
-        \Excel::fake();
+        Excel::fake();
 
         $this->loginAs()
             ->post(
@@ -211,10 +254,10 @@ class InvoicesTest extends FeatureTestCase
             )
             ->assertStatus(200);
 
-        \Excel::matchByRegex();
+        Excel::matchByRegex();
 
-        \Excel::assertDownloaded(
-            '/' . \Str::filename(trans_choice('general.invoices', 2)) . '-\d{10}\.xlsx/',
+        Excel::assertDownloaded(
+            '/' . str()->filename(trans_choice('general.invoices', 2)) . '-\d{10}\.xlsx/',
             function (Export $export) use ($select_count) {
                 return $export->sheets()[0]->collection()->count() === $select_count;
             }
@@ -223,7 +266,7 @@ class InvoicesTest extends FeatureTestCase
 
     public function testItShouldImportInvoices()
     {
-        \Excel::fake();
+        Excel::fake();
 
         $this->loginAs()
             ->post(
@@ -237,7 +280,7 @@ class InvoicesTest extends FeatureTestCase
             )
             ->assertStatus(200);
 
-        \Excel::assertImported('invoices.xlsx');
+        Excel::assertImported('invoices.xlsx');
 
         $this->assertFlashLevel('success');
     }
@@ -249,5 +292,17 @@ class InvoicesTest extends FeatureTestCase
         $factory = $recurring ? $factory->invoice()->items()->recurring() : $factory->invoice()->items();
 
         return $factory->raw();
+    }
+
+    public function getEmailRequest($invoice)
+    {
+        $notification = new Notification($invoice, 'invoice_new_customer', true);
+
+        return [
+            'document_id'   => $invoice->id,
+            'to'            => [$invoice->contact->email],
+            'subject'       => $notification->getSubject(),
+            'body'          => $notification->getBody(),
+        ];
     }
 }

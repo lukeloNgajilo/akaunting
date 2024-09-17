@@ -28,7 +28,7 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
 
     public function handle(): void
     {
-        $precision = config('money.' . $this->document->currency_code . '.precision');
+        $precision = currency($this->document->currency_code)->getPrecision();
 
         list($sub_total, $actual_total, $discount_amount_total, $taxes) = $this->createItems();
 
@@ -68,7 +68,7 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
             $sort_order++;
         }
 
-        if (!empty($this->request['discount'])) {
+        if (! empty($this->request['discount'])) {
             if ($this->request['discount_type'] === 'percentage') {
                 $discount_total = ($sub_total - $discount_amount_total) * ($this->request['discount'] / 100);
             } else {
@@ -91,7 +91,7 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
         }
 
         // Add taxes
-        if (!empty($taxes)) {
+        if (! empty($taxes)) {
             foreach ($taxes as $tax) {
                 DocumentTotal::create([
                     'company_id' => $this->document->company_id,
@@ -112,7 +112,7 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
         }
 
         // Add extra totals, i.e. shipping fee
-        if (!empty($this->request['totals'])) {
+        if (! empty($this->request['totals'])) {
             foreach ($this->request['totals'] as $total) {
                 $total['company_id'] = $this->document->company_id;
                 $total['type'] = $this->document->type;
@@ -149,7 +149,7 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
             'document_id' => $this->document->id,
             'code' => 'total',
             'name' => 'invoices.total',
-            'amount' =>  $this->request['amount'],
+            'amount' => $this->request['amount'],
             'sort_order' => $sort_order,
             'created_from' => $this->request['created_from'],
             'created_by' => $this->request['created_by'],
@@ -166,14 +166,14 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
             return [$sub_total, $actual_total, $discount_amount_total, $taxes];
         }
 
-        if (!empty($this->request['discount']) && $this->request['discount_type'] !== 'percentage') {
+        if (! empty($this->request['discount']) && $this->request['discount_type'] !== 'percentage') {
             $for_fixed_discount = $this->fixedDiscountCalculate();
         }
 
         foreach ((array) $this->request['items'] as $key => $item) {
             $item['global_discount'] = 0;
 
-            if (!empty($this->request['discount'])) {
+            if (! empty($this->request['discount'])) {
                 if (isset($for_fixed_discount)) {
                     $item['global_discount'] = ($for_fixed_discount[$key] / ($for_fixed_discount['total'] / 100)) * ($this->request['discount'] / 100);
                     $item['global_discount_type'] = '';
@@ -198,7 +198,7 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
                     'enabled' => '1',
                 ];
 
-                if (!empty($item['tax_ids'])) {
+                if (! empty($item['tax_ids'])) {
                     $new_item_request['tax_ids'] = $item['tax_ids'];
                 }
 
@@ -213,7 +213,7 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
 
             $discount_amount = 0;
 
-            if (!empty($item['discount'])) {
+            if (! empty($item['discount'])) {
                 if ($item['discount_type'] === 'percentage') {
                     $discount_amount = ($item_amount * ($item['discount'] / 100));
                 } else {
@@ -227,7 +227,7 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
 
             $discount_amount_total += $discount_amount;
 
-            if (!$document_item->item_taxes) {
+            if (! $document_item->item_taxes) {
                 continue;
             }
 
@@ -255,10 +255,12 @@ class CreateDocumentItemsAndTotals extends Job implements HasOwner, HasSource, S
             $sub = (double) $item['price'] * (double) $item['quantity'];
 
             if (! empty($this->request['discount'])) {
-                if ($item['discount_type'] === 'percentage') {
-                    $sub -= ($sub * ($item['discount'] / 100));
-                } else {
-                    $sub -= $item['discount'];
+                if (isset($item['discount']) && isset($item['discount_type'])) {
+                    if ($item['discount_type'] === 'percentage') {
+                        $sub -= ($sub * ($item['discount'] / 100));
+                    } else {
+                        $sub -= $item['discount'];
+                    }
                 }
             }
 

@@ -28,15 +28,15 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
 
     public function handle(): DocumentItem
     {
-        $item_id = !empty($this->request['item_id']) ? $this->request['item_id'] : 0;
-        $precision = config('money.' . $this->document->currency_code . '.precision');
+        $item_id = ! empty($this->request['item_id']) ? $this->request['item_id'] : 0;
+        $precision = currency($this->document->currency_code)->getPrecision();
 
         $item_amount = (double) $this->request['price'] * (double) $this->request['quantity'];
 
         $item_discounted_amount = $item_amount;
 
         // Apply line discount to amount
-        if (!empty($this->request['discount'])) {
+        if (! empty($this->request['discount'])) {
             if ($this->request['discount_type'] === 'percentage') {
                 $item_discounted_amount -= ($item_amount * ($this->request['discount'] / 100));
             } else {
@@ -45,7 +45,7 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
         }
 
         // Apply total discount to amount
-        if (!empty($this->request['global_discount'])) {
+        if (! empty($this->request['global_discount'])) {
             if ($this->request['global_discount_type'] === 'percentage') {
                 $item_discounted_amount -= $item_discounted_amount * ($this->request['global_discount'] / 100);
             } else {
@@ -58,7 +58,7 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
         $actual_price_item = $item_amount = $item_discounted_amount;
 
         $item_taxes = [];
-        $doc_parms = [
+        $doc_params = [
             'company_id'    => $this->document->company_id,
             'type'          => $this->document->type,
             'document_id'   => $this->document->id,
@@ -68,6 +68,12 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
             // New variables by tax type & tax sorting
             foreach ((array) $this->request['tax_ids'] as $tax_id) {
                 $tax = Tax::find($tax_id);
+
+                // If tax not found, skip
+                if (! $tax) {
+                    continue;
+                }
+
                 ${$tax->type . 's'}[] = $tax;
             }
 
@@ -75,7 +81,7 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
                 foreach ($inclusives as $inclusive) {
                     $tax_amount = $item_discounted_amount - ($item_discounted_amount / (1 + $inclusive->rate / 100));
 
-                    $item_taxes[] = $doc_parms + [
+                    $item_taxes[] = $doc_params + [
                         'tax_id' => $inclusive->id,
                         'name' => $inclusive->name,
                         'amount' => $tax_amount,
@@ -91,7 +97,7 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
                 foreach ($fixeds as $tax) {
                     $tax_amount = $tax->rate * (double) $this->request['quantity'];
 
-                    $item_taxes[] = $doc_parms + [
+                    $item_taxes[] = $doc_params + [
                         'tax_id' => $tax->id,
                         'name' => $tax->name,
                         'amount' => $tax_amount,
@@ -106,7 +112,7 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
                 foreach ($normals as $tax) {
                     $tax_amount = $actual_price_item * ($tax->rate / 100);
 
-                    $item_taxes[] = $doc_parms + [
+                    $item_taxes[] = $doc_params + [
                         'tax_id' => $tax->id,
                         'name' => $tax->name,
                         'amount' => $tax_amount,
@@ -121,7 +127,7 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
                 foreach ($withholdings as $tax) {
                     $tax_amount = -($actual_price_item * ($tax->rate / 100));
 
-                    $item_taxes[] = $doc_parms + [
+                    $item_taxes[] = $doc_params + [
                         'tax_id' => $tax->id,
                         'name' => $tax->name,
                         'amount' => $tax_amount,
@@ -136,7 +142,7 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
                 foreach ($compounds as $compound) {
                     $tax_amount = ($item_amount / 100) * $compound->rate;
 
-                    $item_taxes[] = $doc_parms + [
+                    $item_taxes[] = $doc_params + [
                         'tax_id' => $compound->id,
                         'name' => $compound->name,
                         'amount' => $tax_amount,
@@ -152,12 +158,12 @@ class CreateDocumentItem extends Job implements HasOwner, HasSource, ShouldCreat
         $this->request['document_id'] = $this->document->id;
         $this->request['item_id'] = $item_id;
         $this->request['name'] = Str::limit($this->request['name'], 180, '');
-        $this->request['description'] = !empty($this->request['description']) ? $this->request['description'] : '';
+        $this->request['description'] = ! empty($this->request['description']) ? $this->request['description'] : '';
         $this->request['quantity'] = (double) $this->request['quantity'];
         $this->request['price'] = round($this->request['price'], $precision);
         $this->request['tax'] = round($item_tax_total, $precision);
-        $this->request['discount_type'] = !empty($this->request['discount_type']) ? $this->request['discount_type'] : 'percentage';
-        $this->request['discount_rate'] = !empty($this->request['discount']) ? $this->request['discount'] : 0;
+        $this->request['discount_type'] = ! empty($this->request['discount_type']) ? $this->request['discount_type'] : 'percent';
+        $this->request['discount_rate'] = ! empty($this->request['discount']) ? $this->request['discount'] : 0;
         $this->request['total'] = round($actual_price_item, $precision);
         $this->request['created_from'] = $this->request['created_from'];
         $this->request['created_by'] = $this->request['created_by'];

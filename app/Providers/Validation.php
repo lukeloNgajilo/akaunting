@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Setting\Currency;
+use App\Utilities\Modules;
 use Illuminate\Support\ServiceProvider as Provider;
+use Illuminate\Support\Str;
 use Validator;
 
 class Validation extends Provider
@@ -46,11 +48,11 @@ class Validation extends Provider
         Validator::extend('amount', function ($attribute, $value, $parameters, $validator) use (&$amount) {
             $status = false;
 
-            if ($value > 0) {
+            if ($value > 0 || in_array($value, $parameters)) {
                 $status = true;
             }
 
-            if (!preg_match("/^(?=.*?[0-9])[0-9.,]+$/", $value)) {
+            if (! preg_match("/^(?=.*?[0-9])[0-9.,]+$/", $value)) {
                 $status = false;
             }
 
@@ -67,6 +69,55 @@ class Validation extends Provider
             return !empty($extension) && in_array($extension, $parameters);
         },
             trans('validation.custom.invalid_extension')
+        );
+
+        Validator::extend('colour', function ($attribute, $value, $parameters, $validator) {
+            $status = false;
+
+            $colors = ['gray', 'red', 'yellow', 'green', 'blue', 'indigo', 'purple', 'pink'];
+            $variants = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
+
+            foreach ($colors as $color) {
+                if (! Str::contains($value, $color)) {
+                    continue;
+                }
+
+                foreach ($variants as $variant) {
+                    $name = $color . '-' . $variant;
+
+                    if (Str::contains($value, $name)) {
+                        $status = true;
+
+                        break;
+                    }
+                }
+
+                if ($status) {
+                    break;
+                }
+            }
+
+            if (! $status && Str::contains($value, '#')) {
+                $status = true;
+            }
+
+            return $status;
+        },
+            trans('validation.custom.invalid_colour')
+        );
+
+        Validator::extend('payment_method', function ($attribute, $value, $parameters, $validator) {
+            $status = false;
+
+            $methods = Modules::getPaymentMethods('all');
+
+            if (array_key_exists($value, $methods)) {
+                $status = true;
+            }
+
+            return $status;
+        },
+            trans('validation.custom.invalid_payment_method')
         );
     }
 

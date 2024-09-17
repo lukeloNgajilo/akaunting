@@ -20,4 +20,7 @@ return [
         'unreconcile'   => '您确定要 <b>反核对</b> 选定的记录？|您确定要 <b>反核对</b> 选定记录吗？',
     ],
 
+    'success' => [
+        'general'       => ':count 记录 :type',
+    ],
 ];

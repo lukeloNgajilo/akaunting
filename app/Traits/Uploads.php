@@ -4,7 +4,6 @@ namespace App\Traits;
 
 use App\Models\Common\Media as MediaModel;
 use App\Utilities\Date;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use MediaUploader;
 
@@ -14,7 +13,7 @@ trait Uploads
     {
         $path = '';
 
-        if (!$file || !$file->isValid()) {
+        if (! $file || ! $file->isValid()) {
             return $path;
         }
 
@@ -38,7 +37,7 @@ trait Uploads
     {
         $path = '';
 
-        if (!$disk) {
+        if (! $disk) {
             $disk = config('mediable.default_disk');
         }
 
@@ -57,14 +56,22 @@ trait Uploads
     {
         $medias = $model->$parameter;
 
-        if (!$medias) {
+        if (! $medias) {
             return;
+        }
+
+        $multiple = true;
+
+        if ($medias instanceof \App\Models\Common\Media) {
+            $multiple = false;
+
+            $medias = [$medias];
         }
 
         $already_uploaded = [];
 
         if ($request && isset($request['uploaded_' . $parameter])) {
-            $uploaded = $request['uploaded_' . $parameter];
+            $uploaded = ($multiple) ? $request['uploaded_' . $parameter] : [$request['uploaded_' . $parameter]];
 
             if (count($medias) == count($uploaded)) {
                 return;
@@ -75,7 +82,7 @@ trait Uploads
             }
         }
 
-        foreach ((array)$medias as $media) {
+        foreach ((array) $medias as $media) {
             if (in_array($media->id, $already_uploaded)) {
                 continue;
             }
@@ -86,7 +93,7 @@ trait Uploads
 
     public function getMediaFolder($folder, $company_id = null)
     {
-        if (!$company_id) {
+        if (! $company_id) {
             $company_id = company_id();
         }
 
@@ -98,20 +105,20 @@ trait Uploads
 
     public function getMediaPathOnStorage($media)
     {
-        if (!is_object($media)) {
+        if (! is_object($media)) {
             return false;
         }
 
         $path = $media->getDiskPath();
 
-        if (Storage::missing($path)) {
+        if (! $media->fileExists()) {
             return false;
         }
 
         return $path;
     }
 
-    public function streamMedia($media)
+    public function streamMedia($media, $disposition = 'attachment')
     {
         return response()->streamDownload(
             function() use ($media) {
@@ -126,6 +133,7 @@ trait Uploads
                 'Content-Type'      => $media->mime_type,
                 'Content-Length'    => $media->size,
             ],
+            $disposition,
         );
     }
 

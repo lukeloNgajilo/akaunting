@@ -24,13 +24,17 @@ class Categories extends Controller
      */
     public function index()
     {
-        $categories = Category::collect();
+        $query = Category::with('sub_categories');
 
-        $transfer_id = Category::transfer();
+        if (request()->has('search')) {
+            $query->withSubcategory();
+        }
 
         $types = $this->getCategoryTypes();
 
-        return $this->response('settings.categories.index', compact('categories', 'types', 'transfer_id'));
+        $categories = $query->type(array_keys($types))->collect();
+
+        return $this->response('settings.categories.index', compact('categories', 'types'));
     }
 
     /**
@@ -52,7 +56,21 @@ class Categories extends Controller
     {
         $types = $this->getCategoryTypes();
 
-        return view('settings.categories.create', compact('types'));
+        $categories = [];
+
+        foreach (config('type.category') as $type => $config) {
+            $categories[$type] = [];
+        }
+
+        Category::enabled()->orderBy('name')->get()->each(function ($category) use (&$categories) {
+            $categories[$category->type][] = [
+                'id' => $category->id,
+                'title' => $category->name,
+                'level' => $category->level,
+            ];
+        });
+
+        return view('settings.categories.create', compact('types', 'categories'));
     }
 
     /**
@@ -69,7 +87,7 @@ class Categories extends Controller
         if ($response['success']) {
             $response['redirect'] = route('categories.index');
 
-            $message = trans('messages.success.added', ['type' => trans_choice('general.categories', 1)]);
+            $message = trans('messages.success.created', ['type' => trans_choice('general.categories', 1)]);
 
             flash($message)->success();
         } else {
@@ -120,7 +138,44 @@ class Categories extends Controller
 
         $type_disabled = (Category::where('type', $category->type)->count() == 1) ?: false;
 
-        return view('settings.categories.edit', compact('category', 'types', 'type_disabled'));
+        $edited_category_id = $category->id;
+
+        $categories = [];
+
+        foreach (config('type.category') as $type => $config) {
+            $categories[$type] = [];
+        }
+
+        $skip_categories = [];
+        $skip_categories[] = $edited_category_id;
+
+        foreach ($category->sub_categories as $sub_category) {
+            $skip_categories[] = $sub_category->id;
+
+            if ($sub_category->sub_categories) {
+                $skips = $this->getChildrenCategoryIds($sub_category);
+
+                foreach ($skips as $skip) {
+                    $skip_categories[] = $skip;
+                }
+            }
+        }
+
+        Category::enabled()->orderBy('name')->get()->each(function ($category) use (&$categories, &$skip_categories) {
+            if (in_array($category->id, $skip_categories)) {
+                return;
+            }
+
+            $categories[$category->type][] = [
+                'id' => $category->id,
+                'title' => $category->name,
+                'level' => $category->level,
+            ];
+        });
+
+        $parent_categories = $categories[$category->type] ?? [];
+
+        return view('settings.categories.edit', compact('category', 'types', 'type_disabled', 'categories', 'parent_categories'));
     }
 
     /**

@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\HtmlString;
 
 class ExportFailed extends Notification implements ShouldQueue
 {
@@ -50,9 +51,12 @@ class ExportFailed extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->subject(trans('notifications.export.failed.subject'))
+            ->subject(trans('notifications.export.failed.title'))
+            ->line(new HtmlString('<br><br>'))
             ->line(trans('notifications.export.failed.description'))
-            ->line($this->message);
+            ->line(new HtmlString('<br><br>'))
+            ->line($this->message)
+            ->line(new HtmlString('<br><br>'));
     }
 
     /**
@@ -64,6 +68,8 @@ class ExportFailed extends Notification implements ShouldQueue
     public function toArray($notifiable)
     {
         return [
+            'title' => trans('notifications.menu.export_failed.title'),
+            'description' => trans('notifications.menu.export_failed.description'),
             'message' => $this->message,
         ];
     }

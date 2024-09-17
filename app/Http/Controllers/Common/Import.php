@@ -38,14 +38,18 @@ class Import extends Controller
             'role' => 'form',
             'class' => 'form-loading-button',
             'novalidate' => true,
+            'route' => '',
+            'url' => '',
         ];
 
-        if (!empty($route)) {
+        if (! empty($route)) {
             $form_params['route'] = $route;
         } else {
             $form_params['url'] = $path . '/import';
         }
 
-        return view('common.import.create', compact('group', 'type', 'path', 'route', 'form_params', 'title_type', 'sample_file'));
+        $document_link = 'https://akaunting.com/hc/docs/import-export/';
+
+        return view('common.import.create', compact('group', 'type', 'path', 'route', 'form_params', 'title_type', 'sample_file', 'document_link'));
     }
 }

@@ -3,12 +3,15 @@
 namespace App\Providers;
 
 use App\Notifications\Common\ImportFailed;
+use App\Traits\Modules;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\ServiceProvider as Provider;
 
 class Queue extends Provider
 {
+    use Modules;
+
     /**
      * Register any application services.
      *
@@ -37,16 +40,10 @@ class Queue extends Provider
         });
 
         app('events')->listen(JobProcessing::class, function ($event) {
-            if (! defined('APP_RUNNING_IN_QUEUE')) {
-                define('APP_RUNNING_IN_QUEUE', true);
-            }
-
             $payload = $event->job->payload();
 
-            if (!array_key_exists('company_id', $payload)) {
-                $event->job->delete();
-
-                throw new \Exception('Missing company. Payload: ' . json_encode($payload));
+            if (! array_key_exists('company_id', $payload)) {
+                return;
             }
 
             $company = company($payload['company_id']);
@@ -58,6 +55,11 @@ class Queue extends Provider
             }
 
             $company->makeCurrent();
+
+            // TODO: Move queue control at the beginning of the closure
+            if (should_queue()) {
+                $this->registerModules();
+            }
         });
 
         app('events')->listen(JobFailed::class, function ($event) {

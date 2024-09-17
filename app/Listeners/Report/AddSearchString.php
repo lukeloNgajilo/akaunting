@@ -42,13 +42,16 @@ class AddSearchString extends Listener
             foreach ($old as $key => $value) {
                 $filter = $key . ':' . $value;
 
-                if (!in_array($filter, $filters)) {
+                if (! in_array($filter, $filters)) {
                     $filters[] = $filter;
                 }
             }
 
             foreach ($request as $key => $value) {
-                if ($key == 'search') {
+                if ($key == 'search'
+                    || $key == 'start_date'
+                    || $key == 'end_date'
+                ) {
                     continue;
                 }
 

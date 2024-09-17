@@ -14,7 +14,15 @@ class Customers extends Export
 
     public function map($model): array
     {
-        $model->country = ($model->country) ? trans('countries.' . $model->country) : null;
+        $country = null;
+
+        if ($model->country && array_key_exists($model->country, trans('countries'))) {
+            $country = trans('countries.' . $model->country);
+        }
+
+        $model->country = $country;
+
+        $model->can_login = $model->user_id ? true : false;
 
         return parent::map($model);
     }
@@ -35,7 +43,7 @@ class Customers extends Export
             'currency_code',
             'reference',
             'enabled',
-            'user_id',
+            'can_login',
         ];
     }
 }

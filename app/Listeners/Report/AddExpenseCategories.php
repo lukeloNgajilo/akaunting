@@ -28,6 +28,7 @@ class AddExpenseCategories extends Listener
         // send true for add limit on search and filter..
         $event->class->filters['categories'] = $this->getExpenseCategories(true);
         $event->class->filters['routes']['categories'] = ['categories.index', 'search=type:expense enabled:1'];
+        $event->class->filters['multiple']['categories'] = true;
     }
 
     /**
@@ -70,5 +71,11 @@ class AddExpenseCategories extends Listener
         }
 
         $this->setRowNamesAndValues($event, $rows);
+
+        $event->class->row_tree_nodes = [];
+
+        $nodes = $this->getCategoriesNodes($rows);
+
+        $this->setTreeNodes($event, $nodes);
     }
 }

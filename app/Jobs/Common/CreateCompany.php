@@ -2,19 +2,28 @@
 
 namespace App\Jobs\Common;
 
+use Akaunting\Money\Currency as MoneyCurrency;
 use App\Abstracts\Job;
 use App\Events\Common\CompanyCreated;
 use App\Events\Common\CompanyCreating;
 use App\Interfaces\Job\HasOwner;
 use App\Interfaces\Job\HasSource;
 use App\Interfaces\Job\ShouldCreate;
+use App\Models\Banking\Account;
 use App\Models\Common\Company;
+use App\Models\Setting\Currency;
+use App\Traits\Plans;
 use Illuminate\Support\Facades\Artisan;
+use OutOfBoundsException;
 
 class CreateCompany extends Job implements HasOwner, HasSource, ShouldCreate
 {
+    use Plans;
+
     public function handle(): Company
     {
+        $this->authorize();
+
         $current_company_id = company_id();
 
         event(new CompanyCreating($this->request));
@@ -26,16 +35,31 @@ class CreateCompany extends Job implements HasOwner, HasSource, ShouldCreate
 
             $this->callSeeds();
 
+            $this->updateCurrency();
+
             $this->updateSettings();
         });
 
-        event(new CompanyCreated($this->model));
-
-        if (!empty($current_company_id)) {
+        if (! empty($current_company_id)) {
             company($current_company_id)->makeCurrent();
         }
 
+        $this->clearPlansCache();
+
+        event(new CompanyCreated($this->model, $this->request));
+
         return $this->model;
+    }
+
+    /**
+     * Determine if this action is applicable.
+     */
+    public function authorize(): void
+    {
+        $limit = $this->getAnyActionLimitOfPlan();
+        if (! $limit->action_status) {
+            throw new \Exception($limit->message);
+        }
     }
 
     protected function callSeeds(): void
@@ -98,5 +122,43 @@ class CreateCompany extends Job implements HasOwner, HasSource, ShouldCreate
         }
 
         setting()->save();
+    }
+
+    protected function updateCurrency()
+    {
+        $currency_code = $this->request->get('currency');
+
+        if ($currency_code == 'USD') {
+            return;
+        }
+
+        $currency = Currency::where('company_id', $this->model->id)
+                            ->where('code', $currency_code)
+                            ->first();
+
+        if ($currency) {
+            $currency->rate = '1';
+            $currency->enabled = '1';
+
+            $currency->save();
+        } else {
+            try {
+                $data = (new MoneyCurrency($currency_code))->toArray()[$currency_code];
+                $data['rate'] = '1';
+                $data['enabled'] = '1';
+                $data['company_id'] = $this->model->id;
+                $data['code'] = $currency_code;
+                $data['created_from'] = 'core::ui';
+                $data['created_by'] = user_id();
+
+                $currency = Currency::create($data);
+            } catch (OutOfBoundsException $e) {
+            }
+        }
+
+        $account = Account::where('company_id', $this->model->id)->first();
+
+        $account->currency_code = $currency_code;
+        $account->save();
     }
 }

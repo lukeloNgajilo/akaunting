@@ -28,6 +28,7 @@ class AddIncomeCategories extends Listener
         // send true for add limit on search and filter..
         $event->class->filters['categories'] = $this->getIncomeCategories(true);
         $event->class->filters['routes']['categories'] = ['categories.index', 'search=type:income enabled:1'];
+        $event->class->filters['multiple']['categories'] = true;
     }
 
     /**
@@ -70,5 +71,11 @@ class AddIncomeCategories extends Listener
         }
 
         $this->setRowNamesAndValues($event, $rows);
+
+        $event->class->row_tree_nodes = [];
+
+        $nodes = $this->getCategoriesNodes($rows);
+
+        $this->setTreeNodes($event, $nodes);
     }
 }

@@ -19,11 +19,11 @@ class Money
      */
     public function handle($request, Closure $next)
     {
-        if (($request->method() != 'POST') && ($request->method() != 'PATCH')) {
+        if (! in_array($request->method(), ['POST', 'PATCH', 'PUT'])) {
             return $next($request);
         }
 
-        $currency_code = setting('default.currency');
+        $currency_code = default_currency();
 
         if ($request->get('currency_code')) {
             $currency_code = $request->get('currency_code');
@@ -84,7 +84,7 @@ class Money
 
                     $amount = $item['price'];
 
-                    if (strpos($item['price'], config('money.' . $currency_code . '.symbol')) !== false) {
+                    if (strpos($item['price'], currency($currency_code)->getSymbol()) !== false) {
                         $amount = $this->getAmount($item['price'], $currency_code);
                     }
 
@@ -101,11 +101,11 @@ class Money
     protected function getAmount($money_format, $currency_code)
     {
         try {
-            if (config('money.' . $currency_code . '.decimal_mark') !== '.') {
-                $money_format = Str::replaceFirst('.', config('money.' . $currency_code . '.decimal_mark'), $money_format);
+            if (currency($currency_code)->getDecimalMark() !== '.') {
+                $money_format = Str::replaceFirst('.', currency($currency_code)->getDecimalMark(), $money_format);
             }
 
-            $amount = money($money_format, $currency_code)->getAmount();
+            $amount = money($money_format, $currency_code, false)->getAmount();
         } catch (InvalidArgumentException | OutOfBoundsException | UnexpectedValueException $e) {
             report($e);
 

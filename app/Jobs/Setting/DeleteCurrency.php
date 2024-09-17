@@ -3,6 +3,8 @@
 namespace App\Jobs\Setting;
 
 use App\Abstracts\Job;
+use App\Events\Setting\CurrencyDeleted;
+use App\Events\Setting\CurrencyDeleting;
 use App\Interfaces\Job\ShouldDelete;
 
 class DeleteCurrency extends Job implements ShouldDelete
@@ -11,9 +13,13 @@ class DeleteCurrency extends Job implements ShouldDelete
     {
         $this->authorize();
 
+        event(new CurrencyDeleting($this->model));
+
         \DB::transaction(function () {
             $this->model->delete();
         });
+
+        event(new CurrencyDeleted($this->model));
 
         return true;
     }
@@ -42,7 +48,7 @@ class DeleteCurrency extends Job implements ShouldDelete
 
         $relationships = $this->countRelationships($this->model, $rels);
 
-        if ($this->model->code == setting('default.currency')) {
+        if ($this->model->code == default_currency()) {
             $relationships[] = strtolower(trans_choice('general.companies', 1));
         }
 

@@ -34,6 +34,22 @@ class Uploads extends Controller
         return $this->streamMedia($media);
     }
 
+    public function inline($id)
+    {
+        try {
+            $media = Media::find($id);
+        } catch (\Exception $e) {
+            return response(null, 204);
+        }
+
+        // Get file path
+        if (!$this->getMediaPathOnStorage($media)) {
+            return response(null, 204);
+        }
+
+        return $this->streamMedia($media, 'inline');
+    }
+
     /**
      * Get the specified resource.
      *
@@ -82,7 +98,7 @@ class Uploads extends Controller
 
         $file = $media;
 
-        $html = view('partials.media.file', compact('file', 'column_name', 'options'))->render();
+        $html = view('components.media.file', compact('file', 'column_name', 'options'))->render();
 
         return response()->json([
             'success' => true,

@@ -78,6 +78,14 @@ class Route extends Provider
             ], $attributes));
         });
 
+        Facade::macro('preview', function ($alias, $routes, $attributes = []) {
+            return Facade::module($alias, $routes, array_merge([
+                'middleware'    => 'preview',
+                'prefix'        => 'preview/' . $alias,
+                'as'            => 'preview.' . $alias . '.',
+            ], $attributes));
+        });
+
         Facade::macro('portal', function ($alias, $routes, $attributes = []) {
             return Facade::module($alias, $routes, array_merge([
                 'middleware'    => 'portal',
@@ -94,18 +102,14 @@ class Route extends Provider
             ], $attributes));
         });
 
-        Facade::macro('api', function ($alias, $routes, $attrs = []) {
-            $attributes = array_merge([
+        Facade::macro('api', function ($alias, $routes, $attributes = []) {
+            return Facade::module($alias, $routes, array_merge([
                 'namespace'     => 'Modules\\' . module($alias)->getStudlyName() . '\Http\Controllers\Api',
-                'prefix'        => $alias,
-                'as'            => 'api.' . $alias,
-            ], $attrs);
-
-            $api = app('Dingo\Api\Routing\Router');
-
-            return $api->version(config('api.version'), ['middleware' => ['api']], function($api) use ($attributes, $routes) {
-                $api->group($attributes, $routes);
-            });
+                'domain'        => config('api.domain'),
+                'middleware'    => config('api.middleware'),
+                'prefix'        => config('api.prefix') ? config('api.prefix') . '/' . $alias : $alias,
+                'as'            => 'api.' . $alias . '.',
+            ], $attributes));
         });
     }
 
@@ -130,9 +134,13 @@ class Route extends Provider
 
         $this->mapAdminRoutes();
 
+        $this->mapPreviewRoutes();
+
         $this->mapPortalRoutes();
 
         $this->mapSignedRoutes();
+
+        $this->mapWebRoutes();
     }
 
     /**
@@ -159,8 +167,10 @@ class Route extends Provider
      */
     protected function mapApiRoutes()
     {
-        Facade::prefix('api')
-            ->namespace($this->namespace)
+        Facade::prefix(config('api.prefix'))
+            ->domain(config('api.domain'))
+            ->middleware(config('api.middleware'))
+            ->namespace($this->namespace . '\Api')
             ->group(base_path('routes/api.php'));
     }
 
@@ -222,6 +232,20 @@ class Route extends Provider
             ->namespace($this->namespace)
             ->group(base_path('routes/admin.php'));
     }
+    /**
+     * Define the "preview" routes for the application.
+     *
+     * These routes all receive session state, CSRF protection, etc.
+     *
+     * @return void
+     */
+    protected function mapPreviewRoutes()
+    {
+        Facade::prefix('{company_id}/preview')
+            ->middleware('preview')
+            ->namespace($this->namespace)
+            ->group(base_path('routes/preview.php'));
+    }
 
     /**
      * Define the "portal" routes for the application.
@@ -254,6 +278,20 @@ class Route extends Provider
     }
 
     /**
+     * Define the "web" routes for the application.
+     *
+     * These routes all receive session state, CSRF protection, etc.
+     *
+     * @return void
+     */
+    protected function mapWebRoutes()
+    {
+        Facade::middleware('web')
+            ->namespace($this->namespace)
+            ->group(base_path('routes/web.php'));
+    }
+
+    /**
      * Configure the rate limiters for the application.
      *
      * @return void
@@ -266,6 +304,13 @@ class Route extends Provider
 
         RateLimiter::for('import', function (Request $request) {
             return Limit::perMinute(config('app.throttles.import'));
+        });
+
+        RateLimiter::for('email', function (Request $request) {
+            return [
+                Limit::perDay(config('app.throttles.email.month'), 30),
+                Limit::perMinute(config('app.throttles.email.minute')),
+            ];
         });
     }
 }

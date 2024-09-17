@@ -3,19 +3,21 @@
 namespace App\Jobs\Auth;
 
 use App\Abstracts\Job;
-use App\Interfaces\Job\ShouldUpdate;
 use App\Events\Auth\UserUpdated;
 use App\Events\Auth\UserUpdating;
-use App\Models\Auth\User;
+use App\Interfaces\Job\ShouldUpdate;
+use App\Models\Common\Company;
+use Illuminate\Support\Facades\Artisan;
 
 class UpdateUser extends Job implements ShouldUpdate
 {
-    public function handle(): User
+    public function handle()
     {
         $this->authorize();
 
         // Do not reset password if not entered/changed
         if (empty($this->request['password'])) {
+            unset($this->request['current_password']);
             unset($this->request['password']);
             unset($this->request['password_confirmation']);
         }
@@ -27,9 +29,13 @@ class UpdateUser extends Job implements ShouldUpdate
 
             // Upload picture
             if ($this->request->file('picture')) {
+                $this->deleteMediaModel($this->model, 'picture', $this->request);
+
                 $media = $this->getMedia($this->request->file('picture'), 'users');
 
                 $this->model->attachMedia($media, 'picture');
+            } elseif (! $this->request->file('picture') && $this->model->picture) {
+                $this->deleteMediaModel($this->model, 'picture', $this->request);
             }
 
             if ($this->request->has('roles')) {
@@ -38,7 +44,7 @@ class UpdateUser extends Job implements ShouldUpdate
 
             if ($this->request->has('companies')) {
                 if (app()->runningInConsole() || request()->isInstall()) {
-                    $this->model->companies()->sync($this->request->get('companies'));
+                    $sync = $this->model->companies()->sync($this->request->get('companies'));
                 } else {
                     $user = user();
 
@@ -47,13 +53,24 @@ class UpdateUser extends Job implements ShouldUpdate
                     });
 
                     if ($companies->isNotEmpty()) {
-                        $this->model->companies()->sync($companies->toArray());
+                        $sync = $this->model->companies()->sync($companies->toArray());
                     }
                 }
             }
 
             if ($this->model->contact) {
                 $this->model->contact->update($this->request->input());
+            }
+
+            if (isset($sync) && !empty($sync['attached'])) {
+                foreach ($sync['attached'] as $id) {
+                    $company = Company::find($id);
+
+                    Artisan::call('user:seed', [
+                        'user' => $this->model->id,
+                        'company' => $company->id,
+                    ]);
+                }
             }
         });
 
@@ -72,6 +89,32 @@ class UpdateUser extends Job implements ShouldUpdate
             $message = trans('auth.error.self_disable');
 
             throw new \Exception($message);
+        }
+
+        // Can't unassigned company, The company must be assigned at least one user.
+        if ($this->request->has('companies')) {
+            $companies = (array) $this->request->get('companies', []);
+            $user_companies = $this->model->companies()->pluck('id')->toArray();
+
+            $company_diff = array_diff($user_companies, $companies);
+
+            if ($company_diff) {
+                $errors = [];
+
+                foreach ($company_diff as $company_id) {
+                    $company = Company::withCount('users')->find($company_id);
+
+                    if ($company->users_count < 2) {
+                        $errors[] = trans('auth.error.unassigned', ['company' => $company->name]);
+                    }
+                }
+
+                if ($errors) {
+                    $message = implode('\n', $errors);
+
+                    throw new \Exception($message);
+                }
+            }
         }
     }
 }

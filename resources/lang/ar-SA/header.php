@@ -6,7 +6,7 @@ return [
     'last_login'            => 'آخر تسجيل دخول :time',
 
     'notifications' => [
-        'counter'           => '{0} ليس لديك تنبيهات|{1} لديك :count تنبيهات|[2,*] لديك :count تنبيهات',
+        'counter'           => '{0} ليس لديك تنبيهات|{1} لديك :count تنبيه جديد|[2,*] لديك :count تنبيهات جديدة',
         'new_apps'          => '{1} :count تطبيق جديد تم نشره<unk> [2,*] :count تطبيقات جديدة تم نشرها',
         'overdue_invoices'  => '{1} :count فاتورة متأخرة|[2,*] :count فواتير متأخرة',
         'upcoming_bills'    => '{1} :count فاتورة قادمة|[2,*] :count فواتير قادمة',
@@ -24,5 +24,10 @@ return [
 
     'docs_link'             => 'https://akaunting.com/docs',
     'support_link'          => 'https://akaunting.com/support',
+
+    'favorite' => [
+        'added_favorite'    => 'تمت الإضافة إلى المفضلة',
+        'add_favorite'      => 'إضافة إلى المفضلة',
+    ],
 
 ];

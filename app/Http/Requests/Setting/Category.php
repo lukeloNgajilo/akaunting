@@ -13,10 +13,12 @@ class Category extends FormRequest
      */
     public function rules()
     {
+        $types = collect(config('type.category'))->keys();
+
         return [
             'name' => 'required|string',
-            'type' => 'required|string',
-            'color' => 'required|string',
+            'type' => 'required|string|in:' . $types->implode(','),
+            'color' => 'required|string|colour',
         ];
     }
 }

@@ -19,11 +19,13 @@ return [
     'total'                 => 'Łącznie',
 
     'item_name'             => 'Nazwa produktu|Nazwy produktów',
+    'recurring_bills'       => 'Rachunki cykliczne',
 
     'show_discount'         => ':discount% rabatu',
     'add_discount'          => 'Dodaj rabat',
     'discount_desc'         => 'sumy częściowej',
 
+    'payment_made'          => 'Płatność dokonana',
     'payment_due'           => 'Termin płatności',
     'amount_due'            => 'Kwota do zapłaty',
     'paid'                  => 'Opłacone',
@@ -38,6 +40,10 @@ return [
     'create_bill'           => 'Utwórz fakturę',
     'receive_bill'          => 'Odbierz Fakturę',
     'make_payment'          => 'Dokonaj płatności',
+
+    'form_description' => [
+        'billing'           => 'Szczegóły płatności pojawiają się w Twoim rachunku. Data rachunku jest używana w panelu i raportach. Wybierz datę, kiedy spodziewasz się zapłacić jako termin płatności.',
+    ],
 
     'messages' => [
         'draft'             => 'To jest <b>SZKIC</b> rachunku i zostanie odzwierciedlony na wykresach po jego wysłaniu.',

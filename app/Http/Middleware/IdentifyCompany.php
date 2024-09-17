@@ -2,15 +2,14 @@
 
 namespace App\Http\Middleware;
 
+use App\Traits\Companies;
 use App\Traits\Users;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
 
 class IdentifyCompany
 {
-    use Users;
-
-    public $request;
+    use Companies, Users;
 
     /**
      * Handle an incoming request.
@@ -26,9 +25,7 @@ class IdentifyCompany
     {
         $this->request = $request;
 
-        $company_id = $this->request->isApi()
-                        ? $this->getCompanyIdFromApi()
-                        : $this->getCompanyIdFromWeb();
+        $company_id = $this->getCompanyId();
 
         if (empty($company_id)) {
             abort(500, 'Missing company');
@@ -58,32 +55,5 @@ class IdentifyCompany
         }
 
         return $next($this->request);
-    }
-
-    protected function getCompanyIdFromWeb()
-    {
-        return $this->getCompanyIdFromRoute() ?: ($this->getCompanyIdFromQuery() ?: $this->getCompanyIdFromHeader());
-    }
-
-    protected function getCompanyIdFromApi()
-    {
-        $company_id = $this->getCompanyIdFromQuery() ?: $this->getCompanyIdFromHeader();
-
-        return $company_id ?: optional($this->getFirstCompanyOfUser())->id;
-    }
-
-    protected function getCompanyIdFromRoute()
-    {
-        return (int) $this->request->route('company_id');
-    }
-
-    protected function getCompanyIdFromQuery()
-    {
-        return (int) $this->request->query('company_id');
-    }
-
-    protected function getCompanyIdFromHeader()
-    {
-        return (int) $this->request->header('X-Company');
     }
 }
